@@ -2,12 +2,9 @@ import streamlit as st
 from dotenv import dotenv_values
 from PyPDF2 import PdfReader
 from docx import Document
-import openai
+from openai import OpenAI
 from PIL import Image
 import pytesseract
-import pdfplumber
-import tempfile
-import io
 
 
 def get_text_from_word(word_docs):
@@ -63,14 +60,19 @@ def get_text_from_uploaded_files(uploaded_files):
     return pdf_text + "\n\n" + word_text
 
 
+secrets = dotenv_values(".env")
+client = OpenAI(
+  api_key=secrets["OPENAI_API_KEY"]
+)
+
+
 def Generation(usePrompt):
-    completion = openai.ChatCompletion.create(
+    completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "user", "content": usePrompt}
         ]
     )
-
     return completion.choices[0].message.content
 
 
@@ -86,12 +88,8 @@ def main():
         uploaded_files = st.file_uploader("Upload your PDFs or word here and click on Process", accept_multiple_files=True)
         if st.button("Process"):
             with st.spinner("Processing"):
-                secrets = dotenv_values(".env")
-                openai.api_key = secrets["OPENAI_API_KEY"]
-                windows_path = r'D:\OCR\tesseract.exe'
-                pytesseract.tesseract_cmd = windows_path
                 raw_text = get_text_from_uploaded_files(uploaded_files)
-                st.write(raw_text)
+                print(raw_text)
                 prompt = f"""
                 `Here's the content from the PDF file:
                 {raw_text}
@@ -99,8 +97,9 @@ def main():
                 Now, let's fine-tune the model using a few examples. 
 
                 Question: 
-                    Let's create a set of questions similar to the Toeic test just trained above to practice.\n
-                
+                    Let's create a set of questions similar to the Toeic test just trained above\n
+                    The important thing is to have enough questions like the model I gave you and the same number of questions.\n
+                   If the training data is part 6 or part 7, it is necessary to create passages similar to the trained data and questions appropriate to each created passage.\n
                 
                 """
 
